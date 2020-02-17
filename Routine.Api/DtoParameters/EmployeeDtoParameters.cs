@@ -3,21 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Routine.Api.DtoParameters
+namespace Routine.Api.Models
 {
-    public class CompanyDtoParameters
+    public class EmployeeDtoParameters
     {
         private const int MaxPageSize = 20;
-        public string CompanyName { get; set; }
-        public string SearchTerm { get; set; }
-
+        public string Gender { get; set; }
+        public string Q { get; set; }
         public int PageNumber { get; set; } = 1;
-        //public int PageSize { get; set; } = 5;
 
         private int _pageSize = 5;
-
-        public string OrderBy { get; set; } = "CompanyName";
-        public string Fields { get; set; }
 
         public int PageSize
         {
@@ -25,7 +20,7 @@ namespace Routine.Api.DtoParameters
             set => _pageSize = (value > MaxPageSize) ? MaxPageSize : value;
         }
 
-
+        public string OrderBy { get; set; } = "Name";
 
     }
 }

@@ -30,7 +30,7 @@ namespace Routine.Api.Controllers
 
         [HttpGet(Name = nameof(GetCompanies))]
         [HttpHead]
-        public async Task<ActionResult<IEnumerable<CompanyDto>>> GetCompanies([FromQuery]CompanyDtoParameters parameters)
+        public async Task<IActionResult> GetCompanies([FromQuery]CompanyDtoParameters parameters)
         {
 
 
@@ -51,20 +51,21 @@ namespace Routine.Api.Controllers
                 nextPageLink = nextPageLink
             };
 
-            Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(paginationMetadata,new JsonSerializerOptions {
-                Encoder=JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(paginationMetadata, new JsonSerializerOptions
+            {
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             }));
 
             var companyDtos = _mapper.Map<IEnumerable<CompanyDto>>(companies);
 
-            return Ok(companyDtos);
+            return Ok(companyDtos.ShapeData(parameters.Fields));
         }
 
 
 
         [HttpGet("{companyId}", Name = nameof(GetCompany))]
         //[Route("{companyId}")]
-        public async Task<ActionResult<CompanyDto>> GetCompany(Guid companyId)
+        public async Task<ActionResult<CompanyDto>> GetCompany(Guid companyId, string fields)
         {
             //var exist = await _companyRepository.CompanyExistsAsync(companyId);
 
@@ -81,7 +82,7 @@ namespace Routine.Api.Controllers
 
 
 
-            return Ok(_mapper.Map<CompanyDto>(company));
+            return Ok(_mapper.Map<CompanyDto>(company).ShapeData(fields));
         }
 
         [HttpPost]
@@ -111,6 +112,8 @@ namespace Routine.Api.Controllers
                 case ResourceUriType.PreviousPage:
                     return Url.Link(nameof(GetCompanies), new
                     {
+
+                        fields = parameters.Fields,
                         pageNumber = parameters.PageNumber - 1,
                         pageSize = parameters.PageSize,
                         companyName = parameters.CompanyName,
@@ -120,6 +123,7 @@ namespace Routine.Api.Controllers
                 case ResourceUriType.NextPage:
                     return Url.Link(nameof(GetCompanies), new
                     {
+                        fields = parameters.Fields,
                         pageNumber = parameters.PageNumber + 1,
                         pageSize = parameters.PageSize,
                         companyName = parameters.CompanyName,
@@ -129,6 +133,7 @@ namespace Routine.Api.Controllers
                 default:
                     return Url.Link(nameof(GetCompanies), new
                     {
+                        fields = parameters.Fields,
                         pageNumber = parameters.PageNumber,
                         pageSize = parameters.PageSize,
                         companyName = parameters.CompanyName,

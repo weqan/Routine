@@ -29,14 +29,14 @@ namespace Routine.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<EmployeeDto>>> GetEmployeesForCompany(Guid companyId, [FromQuery(Name = "gender")]string genderDisplay, string q)
+        public async Task<ActionResult<IEnumerable<EmployeeDto>>> GetEmployeesForCompany(Guid companyId, [FromQuery]EmployeeDtoParameters parameters)
         {
             if (!await _companyRepository.CompanyExistsAsync(companyId))
             {
                 return NotFound();
             }
 
-            var employees = await _companyRepository.GetEmployeesAsync(companyId, genderDisplay, q);
+            var employees = await _companyRepository.GetEmployeesAsync(companyId, parameters);
 
             var employeeDtos = _mapper.Map<IEnumerable<EmployeeDto>>(employees);
 
@@ -133,7 +133,7 @@ namespace Routine.Api.Controllers
         }
 
         [HttpPatch("{employeeId}")]
-        public async Task<IActionResult> PartiallyUpdateEmployeeForCompany(Guid companyId,Guid employeeId,JsonPatchDocument<EmployeeUpdateDto> patchDocument)
+        public async Task<IActionResult> PartiallyUpdateEmployeeForCompany(Guid companyId, Guid employeeId, JsonPatchDocument<EmployeeUpdateDto> patchDocument)
         {
             if (!await _companyRepository.CompanyExistsAsync(companyId))
             {
@@ -173,7 +173,8 @@ namespace Routine.Api.Controllers
             //需处理验证错误
             patchDocument.ApplyTo(dtoToPatch);
 
-            if (!TryValidateModel(dtoToPatch)){
+            if (!TryValidateModel(dtoToPatch))
+            {
                 return ValidationProblem(ModelState);
             }
 
@@ -197,7 +198,7 @@ namespace Routine.Api.Controllers
 
 
         [HttpDelete("{employeeId}")]
-        public async Task<IActionResult> DeleteEmployeeForCompany(Guid companyId,Guid employeeId)
+        public async Task<IActionResult> DeleteEmployeeForCompany(Guid companyId, Guid employeeId)
         {
             if (!await _companyRepository.CompanyExistsAsync(companyId))
             {

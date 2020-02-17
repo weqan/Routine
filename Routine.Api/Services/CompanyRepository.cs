@@ -3,6 +3,7 @@ using Routine.Api.Data;
 using Routine.Api.DtoParameters;
 using Routine.Api.Entities;
 using Routine.Api.Helpers;
+using Routine.Api.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,10 +14,12 @@ namespace Routine.Api.Services
     public class CompanyRepository : ICompanyRepository
     {
         private readonly RoutineDbContext _context;
+        private readonly IPropertyMappingService _propertyMappingService;
 
-        public CompanyRepository(RoutineDbContext context)
+        public CompanyRepository(RoutineDbContext context, IPropertyMappingService propertyMappingService)
         {
             this._context = context ?? throw new ArgumentNullException(nameof(context));
+            this._propertyMappingService = propertyMappingService ?? throw new ArgumentNullException(nameof(propertyMappingService));
         }
 
         public void AddCompany(Company company)
@@ -141,40 +144,46 @@ namespace Routine.Api.Services
             return await _context.Employees.Where(x => x.CompanyId == companyId && x.Id == employeeId).FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<Employee>> GetEmployeesAsync(Guid companyId, string genderDisplay, string q)
+        public async Task<IEnumerable<Employee>> GetEmployeesAsync(Guid companyId, EmployeeDtoParameters parameters)
         {
             if (companyId == Guid.Empty)
             {
                 throw new ArgumentNullException(nameof(companyId));
             }
 
-            if (string.IsNullOrWhiteSpace(genderDisplay) && string.IsNullOrWhiteSpace(q))
-            {
-                return await _context.Employees
-                    .Where(x => x.CompanyId == companyId)
-                    .OrderBy(x => x.EmployeeNo)
-                    .ToListAsync();
-            }
-
             var items = _context.Employees.Where(x => x.CompanyId == companyId);
 
-            if (!string.IsNullOrWhiteSpace(genderDisplay))
+            if (!string.IsNullOrWhiteSpace(parameters.Gender))
             {
-                var genderStr = genderDisplay.Trim();
+                var genderStr = parameters.Gender.Trim();
                 var gender = Enum.Parse<Gender>(genderStr);
 
                 items = items.Where(x => x.Gender == gender);
             }
 
-            if (!string.IsNullOrWhiteSpace(q))
+            if (!string.IsNullOrWhiteSpace(parameters.Q))
             {
-                q = q.Trim();
-                items = items.Where(x => x.EmployeeNo.Contains(q) || x.FirstName.Contains(q) || x.LastName.Contains(q));
+                parameters.Q = parameters.Q.Trim();
+                items = items.Where(x => x.EmployeeNo.Contains(parameters.Q) || x.FirstName.Contains(parameters.Q) || x.LastName.Contains(parameters.Q));
             }
 
-            return await items
-                .OrderBy(x => x.EmployeeNo)
-                .ToListAsync();
+            //简单排序
+            //if (!string.IsNullOrWhiteSpace(parameters.OrderBy))
+            //{
+            //    if (parameters.OrderBy.ToLowerInvariant() == "name")
+            //    {
+            //        items = items.OrderBy(x => x.FirstName).ThenBy(x => x.LastName);
+            //    }
+            //}
+
+
+
+
+            var mappingDictionary = _propertyMappingService.GetPropertyMapping<EmployeeDto, Employee>();
+
+            items = items.ApplySort(parameters.OrderBy, mappingDictionary);
+
+            return await items.ToListAsync();
 
 
 
