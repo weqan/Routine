@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Serialization;
 using Routine.Api.Data;
 using Routine.Api.Services;
 
@@ -33,7 +34,33 @@ namespace Routine.Api
             {
                 setup.ReturnHttpNotAcceptable = true;
                 //setup.OutputFormatters.Insert(0, new XmlDataContractSerializerOutputFormatter());
-            }).AddXmlDataContractSerializerFormatters();
+
+            }).AddXmlDataContractSerializerFormatters()
+            //.AddNewtonsoftJson(setup =>
+            //{
+            //    setup.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+            //})
+            .ConfigureApiBehaviorOptions(setup =>
+            {
+                setup.InvalidModelStateResponseFactory = context =>
+                {
+                    var problemDetails = new ValidationProblemDetails(context.ModelState)
+                    {
+                        Type = "http://weqan.cn",
+                        Title = "有错！！！",
+                        Status = StatusCodes.Status422UnprocessableEntity,
+                        Detail = "请看详细信息",
+                        Instance = context.HttpContext.Request.Path
+                    };
+
+                    problemDetails.Extensions.Add("traceId", context.HttpContext.TraceIdentifier);
+
+                    return new UnprocessableEntityObjectResult(problemDetails)
+                    {
+                        ContentTypes = { "application/problem+json" }
+                    };
+                };
+            });
 
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 

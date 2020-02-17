@@ -1,7 +1,9 @@
-﻿using System;
+﻿using Routine.Api.ValidationAttributes;
+using System;
 
 namespace Routine.Api.Entities
 {
+    [EmployeeNoMustDifferentFromFirstName(ErrorMessage ="员工编号和员工名不同")]
     public class Employee
     {
         public Guid Id { get; set; }

@@ -2,11 +2,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Routine.Api.DtoParameters;
 using Routine.Api.Entities;
+using Routine.Api.Helpers;
 using Routine.Api.Models;
 using Routine.Api.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Routine.Api.Controllers
@@ -25,12 +28,32 @@ namespace Routine.Api.Controllers
             this._mapper = mapper ?? throw new AggregateException(nameof(mapper));
         }
 
-        [HttpGet]
+        [HttpGet(Name = nameof(GetCompanies))]
         [HttpHead]
         public async Task<ActionResult<IEnumerable<CompanyDto>>> GetCompanies([FromQuery]CompanyDtoParameters parameters)
         {
 
+
+
             var companies = await _companyRepository.GetCompaniesAsync(parameters);
+
+            var previousPageLink = companies.HasPrevious ? CreateCompaniesResourceUri(parameters, ResourceUriType.PreviousPage) : null;
+
+            var nextPageLink = companies.HasNext ? CreateCompaniesResourceUri(parameters, ResourceUriType.NextPage) : null;
+
+            var paginationMetadata = new
+            {
+                totalCount = companies.TotalCount,
+                pageSize = companies.PageSize,
+                currentPage = companies.CurrentPage,
+                totalPages = companies.TotalPages,
+                previousPageLink = previousPageLink,
+                nextPageLink = nextPageLink
+            };
+
+            Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(paginationMetadata,new JsonSerializerOptions {
+                Encoder=JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            }));
 
             var companyDtos = _mapper.Map<IEnumerable<CompanyDto>>(companies);
 
@@ -72,6 +95,49 @@ namespace Routine.Api.Controllers
 
             return CreatedAtRoute(nameof(GetCompany), new { companyId = returnDto.Id }, returnDto);
         }
+
+        [HttpOptions]
+        public IActionResult GetCompaniesOptions()
+        {
+            Response.Headers.Add("Allow", "GET,POST,OPTIONS");
+            return Ok();
+        }
+
+        private string CreateCompaniesResourceUri(CompanyDtoParameters parameters, ResourceUriType type)
+        {
+            switch (type)
+            {
+
+                case ResourceUriType.PreviousPage:
+                    return Url.Link(nameof(GetCompanies), new
+                    {
+                        pageNumber = parameters.PageNumber - 1,
+                        pageSize = parameters.PageSize,
+                        companyName = parameters.CompanyName,
+                        searchTerm = parameters.SearchTerm
+                    });
+
+                case ResourceUriType.NextPage:
+                    return Url.Link(nameof(GetCompanies), new
+                    {
+                        pageNumber = parameters.PageNumber + 1,
+                        pageSize = parameters.PageSize,
+                        companyName = parameters.CompanyName,
+                        searchTerm = parameters.SearchTerm
+                    });
+
+                default:
+                    return Url.Link(nameof(GetCompanies), new
+                    {
+                        pageNumber = parameters.PageNumber,
+                        pageSize = parameters.PageSize,
+                        companyName = parameters.CompanyName,
+                        searchTerm = parameters.SearchTerm
+                    });
+
+            }
+        }
+
 
 
     }
